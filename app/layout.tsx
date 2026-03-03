@@ -34,9 +34,9 @@ export default function RootLayout({
           <LightRays
             raysOrigin="top-center-offset"
             raysColor="#5dfeca"
-            raysSpeed={0.5}
-            lightSpread={0.9}
-            rayLength={1.4}
+            raysSpeed={0.8}
+            lightSpread={0.7}
+            rayLength={8}
             followMouse={true}
             mouseInfluence={0.02}
             noiseAmount={0.0}
