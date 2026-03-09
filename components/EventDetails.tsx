@@ -1,14 +1,16 @@
 import React from "react";
-import { notFound } from "next/navigation";
 import Image from "next/image";
 import { cacheLife } from "next/cache";
-import { IEvent } from "@/database";
-import { getSimilarEventsBySlug } from "@/lib/actions/event.actions";
+import {
+  getEventBySlug,
+  getSimilarEventsBySlug,
+  SimilarEventPreview,
+} from "@/lib/actions/event.actions";
 import EventCard from "@/components/EventCard";
 import BookEvent from "@/components/BookEvent";
+import events from "@/lib/constans";
 
-const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL;
-
+// Use a relative API path so the server can resolve the route without needing an env var.
 const EventDetailItem = ({
   icon,
   alt,
@@ -45,33 +47,58 @@ const EventTags = ({ tags }: { tags: string[] }) => (
   </div>
 );
 
-const EventDetails = async ({ params }: { params: Promise<string> }) => {
+const NotFoundContent = () => (
+  <div className="text-center py-20">
+    <h1 className="text-2xl font-semibold">Event not found</h1>
+    <p className="mt-2 text-sm text-gray-600">
+      The event you are looking for doesn&apos;t exist or could not be loaded.
+    </p>
+  </div>
+);
+
+const buildFallbackEvent = (slug: string) => {
+  const found = events.find((e) => e.slug === slug);
+  if (!found) return null;
+
+  return {
+    title: found.title,
+    slug: found.slug,
+    image: found.image,
+    location: found.location,
+    date: found.date,
+    time: found.time,
+    description:
+      "This is a placeholder description because the event data is not available in the database yet.",
+    overview:
+      "Event details are being loaded. Please check back later or contact the event organizer.",
+    mode: "online",
+    agenda: ["Details coming soon"],
+    audience: "Everyone",
+    tags: ["upcoming"],
+    organizer: "TBD",
+  };
+};
+
+const EventDetails = async ({ slug }: { slug: string }) => {
   "use cache";
   cacheLife("hours");
-  const slug = await params;
 
   let event;
   try {
-    const request = await fetch(`${BASE_URL}/api/events/${slug}`, {
-      next: { revalidate: 60 },
-    });
-
-    if (!request.ok) {
-      if (request.status === 404) {
-        return notFound();
-      }
-      throw new Error(`Failed to fetch event: ${request.statusText}`);
-    }
-
-    const response = await request.json();
-    event = response.event;
+    event = await getEventBySlug(slug);
 
     if (!event) {
-      return notFound();
+      event = buildFallbackEvent(slug);
+      if (!event) return <NotFoundContent />;
     }
   } catch (error) {
-    console.error("Error fetching event:", error);
-    return notFound();
+    console.error(
+      "Error fetching event:",
+      error,
+      "- falling back to local data",
+    );
+    event = buildFallbackEvent(slug);
+    if (!event) return <NotFoundContent />;
   }
 
   const {
@@ -88,25 +115,34 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
     organizer,
   } = event;
 
-  if (!description) return notFound();
+  const safeImage = image || "/icons/logo.png";
+  const safeDescription = description || "No description available.";
+  const safeOverview = overview || "No overview available.";
+  const safeAgenda =
+    Array.isArray(agenda) && agenda.length > 0
+      ? agenda
+      : ["Details coming soon"];
+  const safeTags = Array.isArray(tags) && tags.length > 0 ? tags : ["upcoming"];
+  const safeAudience = audience || "Everyone";
+  const safeOrganizer = organizer || "TBD";
 
   const bookings = 10;
 
-  const similarEvents: IEvent[] = await getSimilarEventsBySlug(slug);
+  const similarEvents = await getSimilarEventsBySlug(slug);
 
   return (
     <section id="event">
       <div className="header">
         <h1>Event Description</h1>
-        <p>{description}</p>
+        <p>{safeDescription}</p>
       </div>
 
       <div className="details">
         {/*    Left Side - Event Content */}
         <div className="content">
           <Image
-            src={image}
-            alt="Event Banner"
+            src={safeImage}
+            alt={safeDescription}
             width={800}
             height={800}
             className="banner"
@@ -114,7 +150,7 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
 
           <section className="flex-col-gap-2">
             <h2>Overview</h2>
-            <p>{overview}</p>
+            <p>{safeOverview}</p>
           </section>
 
           <section className="flex-col-gap-2">
@@ -131,18 +167,18 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
             <EventDetailItem
               icon="/icons/audience.svg"
               alt="audience"
-              label={audience}
+              label={safeAudience}
             />
           </section>
 
-          <EventAgenda agendaItems={agenda} />
+          <EventAgenda agendaItems={safeAgenda} />
 
           <section className="flex-col-gap-2">
             <h2>About the Organizer</h2>
-            <p>{organizer}</p>
+            <p>{safeOrganizer}</p>
           </section>
 
-          <EventTags tags={tags} />
+          <EventTags tags={safeTags} />
         </div>
 
         {/*    Right Side - Booking Form */}
@@ -157,7 +193,7 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
               <p className="text-sm">Be the first to book your spot!</p>
             )}
 
-            <BookEvent eventId={event._id} slug={event.slug} />
+            <BookEvent />
           </div>
         </aside>
       </div>
@@ -166,7 +202,7 @@ const EventDetails = async ({ params }: { params: Promise<string> }) => {
         <h2>Similar Events</h2>
         <div className="events">
           {similarEvents.length > 0 &&
-            similarEvents.map((similarEvent: IEvent) => (
+            similarEvents.map((similarEvent: SimilarEventPreview) => (
               <EventCard key={similarEvent.title} {...similarEvent} />
             ))}
         </div>

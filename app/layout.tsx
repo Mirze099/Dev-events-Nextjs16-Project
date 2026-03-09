@@ -30,8 +30,7 @@ export default function RootLayout({
         className={`${schibstedGrotesk.variable} ${martianMono.variable} min-h-screen antialiased`}
         suppressHydrationWarning
       >
-        <Navbar />
-        <div className="absolute inset-0 top-0 z-[-1] min-h-screen">
+        <div className="fixed inset-0 -z-10">
           <LightRays
             raysOrigin="top-center-offset"
             raysColor="#5dfeca"
@@ -47,6 +46,8 @@ export default function RootLayout({
             saturation={1}
           />
         </div>
+
+        <Navbar />
         <main>{children}</main>
       </body>
     </html>
