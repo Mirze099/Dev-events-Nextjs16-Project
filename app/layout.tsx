@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import React from "react";
 import { Schibsted_Grotesk, Martian_Mono } from "next/font/google";
 import LightRays from "@/components/LightRays";
 import "./globals.css";
@@ -48,7 +49,13 @@ export default function RootLayout({
         </div>
 
         <Navbar />
-        <main>{children}</main>
+        <main>
+          <React.Suspense
+            fallback={<div className="p-10 text-center">Loading...</div>}
+          >
+            {children}
+          </React.Suspense>
+        </main>
       </body>
     </html>
   );

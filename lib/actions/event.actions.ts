@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import { Event, IEvent } from "@/database";
 import connectDB from "../mongodb";
 
@@ -25,7 +26,7 @@ export type EventDetail = Pick<
   | "tags"
 > & { _id: string };
 
-export const getAllEvents = async (): Promise<SimilarEventPreview[]> => {
+const getAllEventsImpl = async (): Promise<SimilarEventPreview[]> => {
   try {
     await connectDB();
 
@@ -40,7 +41,7 @@ export const getAllEvents = async (): Promise<SimilarEventPreview[]> => {
   }
 };
 
-export const getEventBySlug = async (
+const getEventBySlugImpl = async (
   slug: string,
 ): Promise<EventDetail | null> => {
   try {
@@ -70,7 +71,7 @@ export const getEventBySlug = async (
   }
 };
 
-export const getSimilarEventsBySlug = async (
+const getSimilarEventsBySlugImpl = async (
   slug: string,
 ): Promise<SimilarEventPreview[]> => {
   try {
@@ -91,3 +92,7 @@ export const getSimilarEventsBySlug = async (
     return [];
   }
 };
+
+export const getAllEvents = cache(getAllEventsImpl);
+export const getEventBySlug = cache(getEventBySlugImpl);
+export const getSimilarEventsBySlug = cache(getSimilarEventsBySlugImpl);
